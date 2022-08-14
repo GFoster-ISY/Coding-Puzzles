@@ -5,7 +5,10 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.Map;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
@@ -355,10 +358,13 @@ public class EditorController {
     @FXML private void onSave(ActionEvent event){
     	displayButtons(false, false);
     	readOnlyMode = true;
-    	System.out.println(event);
+		copyDataToCurrentProblem();
+		saveCurrentProblem();
+		displayEditControls();
+		displayDetails(currentProblem);
     }
 
-    @FXML private void onCancel(ActionEvent event){
+	@FXML private void onCancel(ActionEvent event){
     	displayButtons(false, false);
     	readOnlyMode = true;
     	displayEditControls();
@@ -428,8 +434,66 @@ public class EditorController {
     		btnCancel.setMaxWidth(0);
     	}
     }
-    
-    private void filterBallColours(boolean on) {
+
+	private void copyDataToCurrentProblem() {
+		currentProblem.objectiveStatement = txtStatement.getText();
+		currentProblem.potCount = Integer.parseInt(txtPotCount.getText());
+		currentProblem.container = cbContainer.getValue();
+		currentProblem.ballDetails = cbBallType.getValue();
+		if (currentProblem.ballDetails.equals("BallCount")) {
+			currentProblem.ballCount = Integer.parseInt(txtBallCount.getText());
+			currentProblem.ballColours = new ArrayList<>();
+		} else {
+			currentProblem.ballCount = 0;
+			currentProblem.ballColours = new ArrayList<>();
+			for (BallColour bc : tblBallColour.getItems()) {
+				currentProblem.ballColours.add(bc);
+			}
+		}
+		currentProblem.keyTerms = new JSONArray();
+		for (KeyTerm kt: tblKeyTerms.getItems()){
+			if (kt.isRequired()){
+				currentProblem.keyTerms.add(kt.getTerm());
+			}
+		}
+		currentProblem.solutionType = cbSolutionType.getValue();
+		currentProblem.solutionPotCount = new JSONArray();
+		if (currentProblem.solutionType.equals("PotCount")){
+			for(SolutionPotCount pc: tblSolPotCount.getItems()){
+				currentProblem.solutionPotCount.add(Long.valueOf(pc.getPotCount()));
+			}
+		} else {
+			for(SolutionPotColour pc: tblSolPotColour.getItems()){
+				String colour = pc.toString();
+				if (pc.getRed() != 0){
+					JSONObject obj = new JSONObject();
+					obj.put("Red", Long.valueOf(pc.getRed()));
+					currentProblem.solutionPotCount.add(obj);
+				}
+				if (pc.getBlue() != 0){
+					JSONObject obj = new JSONObject();
+					obj.put("Blue", Long.valueOf(pc.getBlue()));
+					currentProblem.solutionPotCount.add(obj);
+				}
+				if (pc.getGreen() != 0){
+					JSONObject obj = new JSONObject();
+					obj.put("Green", Long.valueOf(pc.getGreen()));
+					currentProblem.solutionPotCount.add(obj);
+				}
+				if (pc.getYellow() != 0){
+					JSONObject obj = new JSONObject();
+					obj.put("Yellow", Long.valueOf(pc.getYellow()));
+					currentProblem.solutionPotCount.add(obj);
+				}
+//				currentProblem.solutionPotCount.add(Long.valueOf(pc.getPotCount()));
+			}
+		}
+	}
+
+	private void saveCurrentProblem() {
+	}
+
+	private void filterBallColours(boolean on) {
     	FilteredList<BallColour> filteredData = new FilteredList<>(allBallColours, t ->  t.isFiltered(on));
     	tblBallColour.setItems(filteredData);    	
     }
@@ -537,16 +601,18 @@ public class EditorController {
 			cbBallType.getSelectionModel().select(problem.ballDetails);
 		}
 		txtBallCount.setText(""+problem.ballCount);
-		setAllBallColoursOff();
-		if (problem.ballColours != null) {
-			for (BallColour bc: allBallColours) {
-				for (BallColour co: problem.ballColours) {
-					if (bc.getColour().equals(co.getColour())) {
-						bc.setAmount(co.getAmount());
-						break;
+		if (problem.ballColours != null && problem.ballColours.get(0) != allBallColours.get(0)) {
+			setAllBallColoursOff();
+			if (problem.ballColours != null) {
+				for (BallColour bc : allBallColours) {
+					for (BallColour co : problem.ballColours) {
+						if (bc.getColour().equals(co.getColour())) {
+							bc.setAmount(co.getAmount());
+							break;
+						}
 					}
 				}
-	    	}
+			}
 		}
 		filterBallColours(true);
 		setAllKeyTermsOff();
